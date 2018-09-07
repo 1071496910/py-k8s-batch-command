@@ -4,9 +4,40 @@
 from kubernetes import client, config
 from kubernetes.client.apis import core_v1_api
 from kubernetes.stream import stream
-import threading
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from SocketServer import ThreadingMixIn
+import threading
 import urlparse
+
+class Handler(BaseHTTPRequestHandler):
+    def _set_headers(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/text/plain')
+        self.end_headers()
+
+    def do_GET(self):
+        
+        self._set_headers()
+        req = self.requestline.split()[1]
+        parsed = urlparse.urlparse(req)
+        params = urlparse.parse_qs(parsed.query)
+
+        if 'namespace' in params.keys():
+
+            namespace = params['namespace']
+            svc_id = params['svc_id']
+            commands = params['commands']
+            if len(namespace) == 0:
+                return
+            print "doBatchCommand(" , namespace[0] ,  svc_id[0] ,  commands[0] , ")"
+            ret = doBatchCommand(namespace[0], svc_id[0], commands[0])
+            self.wfile.write(ret)
+	return 
+
+
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    """Handle requests in a separate thread."""
+
 
 # Configs can be set in Configuration class directly or using helper utility
 config.load_kube_config()
@@ -90,7 +121,7 @@ class S(BaseHTTPRequestHandler):
         self._set_headers()
         self.wfile.write("<html><body><h1>POST!</h1></body></html>")
 
-doBatchCommand("yellowpage", "yellowpage-data", "ls")
-server_address = ('', 8888)
-httpd = HTTPServer(server_address, S)
-httpd.serve_forever()
+if __name__ == '__main__':
+    server = ThreadedHTTPServer(('', 8888), Handler)
+    print 'Starting server, use <Ctrl-C> to stop'
+    server.serve_forever()
