@@ -83,7 +83,7 @@ def doBatchCommand(namespace, svc_id, command):
     for i in thread_list:
         i.join()
 
-    return ''.join(thread_resps)
+    return '\n'.join(thread_resps)
 
     
 
